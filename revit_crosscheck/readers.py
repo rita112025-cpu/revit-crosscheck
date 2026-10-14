@@ -73,10 +73,27 @@ def _clean_header(value):
     return str(value).strip() if value is not None else ""
 
 
-def read_table(path, key_column, sheet=None):
-    """讀檔並回傳 Table；每筆 Record 記下來源位置（檔名:列號）方便回頭查。"""
+def make_record(headers, row, key_position, source):
+    """把一列資料轉成 Record；空編號的列（群組標題、小計、空白列）回傳 None。"""
+    if key_position >= len(row):
+        return None
+    key = row[key_position]
+    if key is None or str(key).strip() == "":
+        return None
+    values = {name: (row[i] if i < len(row) else "") for i, name in enumerate(headers) if name}
+    return Record(key=str(key).strip(), values=values, source=source)
+
+
+def read_table(path, key_column, sheet=None, pages=None, table_settings=None):
+    """讀檔並回傳 Table；每筆 Record 記下來源位置（檔名:列號）方便回頭查。
+
+    pages、table_settings 只對 PDF 有效，見 pdf_reader.read_pdf_table。
+    """
     path = str(path)
     suffix = Path(path).suffix.lower()
+    if suffix == ".pdf":
+        from .pdf_reader import read_pdf_table
+        return read_pdf_table(path, key_column, pages, table_settings)
     if suffix in (".xlsx", ".xlsm"):
         rows, sheet_name = _read_excel_rows(path, sheet)
         location = f"{Path(path).name}!{sheet_name}"
@@ -84,7 +101,7 @@ def read_table(path, key_column, sheet=None):
         rows = _read_text_rows(path)
         location = Path(path).name
     else:
-        raise ReadError(f"不支援的檔案格式：{path}（支援 .txt .csv .tsv .xlsx .xlsm）")
+        raise ReadError(f"不支援的檔案格式：{path}（支援 .txt .csv .tsv .xlsx .xlsm .pdf）")
 
     header_index = None
     for index, row in enumerate(rows[:HEADER_SEARCH_ROWS]):
@@ -99,12 +116,7 @@ def read_table(path, key_column, sheet=None):
     table = Table(path=path, headers=headers)
 
     for index, row in enumerate(rows[header_index + 1:], start=header_index + 2):
-        if key_position >= len(row):
-            continue
-        key = row[key_position]
-        # 空編號的列是群組標題、小計或空白列，跳過
-        if key is None or str(key).strip() == "":
-            continue
-        values = {name: (row[i] if i < len(row) else "") for i, name in enumerate(headers) if name}
-        table.records.append(Record(key=str(key).strip(), values=values, source=f"{location}:{index}"))
+        record = make_record(headers, row, key_position, f"{location}:{index}")
+        if record:
+            table.records.append(record)
     return table
