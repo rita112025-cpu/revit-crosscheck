@@ -20,7 +20,7 @@ def build_parser():
         description="比對 Revit 明細表與設備表／IO List，列出對不上的編號與欄位。",
     )
     parser.add_argument("--model", required=True, help="Revit 匯出的明細表（.txt / .csv / .xlsx）")
-    parser.add_argument("--docs", required=True, help="要對照的文件表格（.xlsx / .csv / .txt）")
+    parser.add_argument("--docs", required=True, help="要對照的文件表格（.xlsx / .csv / .txt / .pdf）")
     parser.add_argument("--config", required=True, help="欄位對應設定 JSON")
     parser.add_argument("--out", default="crosscheck-report", help="報告輸出資料夾（預設 crosscheck-report）")
     return parser
@@ -38,12 +38,22 @@ def load_config(path):
     return config
 
 
+def _read_side(path, side):
+    return read_table(
+        path,
+        side["key"],
+        sheet=side.get("sheet"),
+        pages=side.get("pages"),
+        table_settings=side.get("pdf_table_settings"),
+    )
+
+
 def main(argv=None):
     args = build_parser().parse_args(argv)
     try:
         config = load_config(args.config)
-        model = read_table(args.model, config["model"]["key"], config["model"].get("sheet"))
-        docs = read_table(args.docs, config["docs"]["key"], config["docs"].get("sheet"))
+        model = _read_side(args.model, config["model"])
+        docs = _read_side(args.docs, config["docs"])
         issues, matched = compare(model, docs, config)
     except (ReadError, ValueError, OSError, json.JSONDecodeError) as exc:
         print(f"錯誤：{exc}", file=sys.stderr)

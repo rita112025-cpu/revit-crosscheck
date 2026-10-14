@@ -1,0 +1,9 @@
+{
+  "model": { "key": "標記" },
+  "docs": { "key": "設備編號", "pages": null },
+  "ignore_hyphen": false,
+  "fields": [
+    { "name": "系統", "model": "系統類型", "docs": "系統", "type": "text" },
+    { "name": "安裝高度", "model": "偏移", "docs": "安裝高度(mm)", "type": "number", "tolerance": 10 }
+  ]
+}
