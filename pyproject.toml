@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "revit-crosscheck"
+version = "0.1.0"
+description = "比對 Revit 明細表與設備表／IO List，列出對不上的編號與欄位"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["openpyxl>=3.0"]
+
+[project.scripts]
+revit-crosscheck = "revit_crosscheck.cli:main"
+
+[tool.setuptools]
+packages = ["revit_crosscheck"]
